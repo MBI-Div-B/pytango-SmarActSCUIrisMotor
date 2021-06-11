@@ -1,7 +1,7 @@
 #!/usr/bin/python3 -u
 # -*- coding: utf-8 -*-
 import tango
-from tango import AttrWriteType, DevState, DispLevel, DevFloat
+from tango import AttrWriteType, DevState, DispLevel, DevFloat, Database
 from tango.server import Device, attribute, command, device_property
 import serial
 
@@ -23,7 +23,10 @@ class SmaractSCUIrisMotor(Device):
         Device.init_device(self)
         self.set_state(DevState.INIT)
 
-        self.__position = 0
+        #self.__position = 0
+        attr = Database().get_device_attribute_property(self.get_name(), ["position"])
+        self.__position = int(attr["position"]["__value"][0])
+        print(self.__position)
 
         try:
             self.ctrl = tango.DeviceProxy(self.DeviceCtrl)
