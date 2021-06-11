@@ -8,37 +8,45 @@ import serial
 
 class SmaractSCUIrisMotor(Device):
 
-    speed = attribute(name='speed', label='Speed', dtype="int", access=AttrWriteType.READ_WRITE)
+    DeviceCtrl = device_property(dtype="str")
+    Axis = device_property(dtype="int")
 
-    deviceCtrl = device_property(dtype="str")
-    axis = device_property(dtype="int")
+    position = attribute(
+        name='position',
+        label='Position',
+        dtype="int",
+        access=AttrWriteType.READ_WRITE,
+        memorized=True)
 
     def init_device(self):
         # connect to camera
         Device.init_device(self)
         self.set_state(DevState.INIT)
 
-        self._speed = 0
+        self.__position = 0
 
         try:
-            self.ctrl = tango.DeviceProxy(self.deviceCtrl)
+            self.ctrl = tango.DeviceProxy(self.DeviceCtrl)
+            self.set_state(DevState.ON)
         except:
             self.error_stream('Could not connect to smaract tango controller')
             self.set_state(DevState.OFF)
 
-    def read_speed(self):
-        return self._speed
 
-    def write_speed(self, value):
-        self._speed = value
+    def read_position(self):
+        return self.__position
 
-    @command
-    def open_iris(self):
-        self.ctrl.write(':U%dS%d\n'.encode()%(self.axis,self._speed))
+    def write_position(self, value):
+        diff = value - self.__position
+        if diff < 0: # close
+            self.ctrl.write(':D{:d}S{:d}'.format(self.Axis, abs(diff)))
+        else: # open
+            self.ctrl.write(':U{:d}S{:d}'.format(self.Axis, abs(diff)))
 
-    @command
-    def close_iris(self):
-        self.ctrl.write(':D%dS%d\n'.encode()%(self.axis,self._speed))
+        self.__position = value
+
+    def send_command(self, cmd):
+        self.ctrl.write(cmd + '\n'.encode('utf8'))
 
 
 if __name__ == "__main__":
